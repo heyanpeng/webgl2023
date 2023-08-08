@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>裁剪空间坐标 to 屏幕像素坐标</title>
+    <style>
+        body {
+            margin: 0;
+        }
+        canvas {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script src="./resources/webgl-utils.js"></script>
+<script id="vertex-shader-2d" type="x-shader/x-vertex">
+    attribute vec2 a_position;
+    uniform vec2 u_resolution;
+    void main() {
+        // 从像素坐标转换到 0.0 到 1.0
+        vec2 zeroToOne = a_position / u_resolution;
+        // 再把 0->1 转换 0->2
+        vec2 zeroToTwo = zeroToOne * 2.0;
+        // 把 0->2 转换到 -1->+1 (裁剪空间)
+        vec2 clipSpace = zeroToTwo - 1.0;
+        // 这个时候0,0在左下角
+        // gl_Position = vec4(clipSpace, 0, 1);
+        // 翻转Y轴就0,0就变成了左上角
+        gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+    }
+</script>
+<script id="fragment-shader-2d" type="x-shader/x-fragment">
+    precision mediump float;
+    void main() {
+        gl_FragColor = vec4(1, 0, 0.5, 1);
+    }
+</script>
+<script>
+    function main() {
+        const canvas = document.querySelector("#c");
+        const gl = canvas.getContext("webgl");
+        if (gl) {
+            // 获取顶点着色器代码
+            const vertexShaderSource = document.querySelector("#vertex-shader-2d").text;
+            // 获取片元着色器代码
+            const fragmentShaderSource = document.querySelector("#fragment-shader-2d").text;
+
+            // 创建顶点着色器
+            const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+            // 创建片元着色器
+            const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+            // 创建一个着色器程序
+            const program = createProgram(gl, vertexShader, fragmentShader);
+            // 使用着色器程序
+            gl.useProgram(program);
+
+            // 创建一个position的buffer
+            const positionBuffer = gl.createBuffer();
+            // 将positionBuffer绑定到gl.ARRAY_BUFFER上
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            // 定义position数据
+            const positions = [
+                10, 20,
+                80, 20,
+                10, 30,
+                10, 30,
+                80, 20,
+                80, 30,
+            ];
+            // 将position的数据写到positionBuffer里面
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+            const size = 2;
+            const type = gl.FLOAT;
+            const normalize = false;
+            const stride = 0;
+            const offset = 0;
+            // 找到顶点着色器中a_position属性的位置
+            const positionAttributeLocation = gl.getAttribLocation(program, "a_position");
+            // 设置a_position读取方式
+            gl.vertexAttribPointer(
+                positionAttributeLocation, size, type, normalize, stride, offset);
+            // 启用a_position
+            gl.enableVertexAttribArray(positionAttributeLocation);
+
+            const resolutionUniformLocation = gl.getUniformLocation(program, "u_resolution");
+            gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
+
+            webglUtils.resizeCanvasToDisplaySize(gl.canvas);
+            gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+            gl.clearColor(0, 0, 0, 0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+        }
+    }
+
+    main();
+
+    function createShader(gl, type, source) {
+        const shader = gl.createShader(type);
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        const success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+        if (success) {
+            return shader;
+        }
+        console.log(gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+    }
+
+    function createProgram(gl, vertexShader, fragmentShader) {
+        const program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+        const success = gl.getProgramParameter(program, gl.LINK_STATUS);
+        if (success) {
+            return program;
+        }
+
+        console.log(gl.getProgramInfoLog(program));
+        gl.deleteProgram(program);
+    }
+</script>
+</body>
+</html>
