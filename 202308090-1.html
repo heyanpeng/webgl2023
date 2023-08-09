@@ -121,6 +121,16 @@
         // 纹理尺寸
         const textureSizeLocation = gl.getUniformLocation(program, "u_textureSize");
 
+        // 在 WebGL 中，使用 gl.getUniformLocation 函数获取 uniform 变量的位置时，
+        // 可以通过指定数组索引来获取 uniform 数组中特定元素的位置。
+        // 这意味着，如果您使用 gl.getUniformLocation(shaderProgram, "u_kernel[0]") 获取到了 u_kernel 数组中索引为 0 的元素的位置，
+        // 那么您确实可以使用 gl.uniform1fv 来为整个 u_kernel 数组赋值。
+        // 虽然在规范上并没有明确说明能否使用数组元素的位置来为整个数组赋值，
+        // 但根据大多数 WebGL 实现的行为，它们确实支持这种用法。
+        // 使用 gl.uniform1fv 函数并传递一个包含完整数组数据的 JavaScript 数组，会将该数据分配给整个 uniform 数组。
+        // 请记住，这种行为可能因不同的 WebGL 实现而有所差异，因此最好遵循推荐的做法，
+        // 即获取整个 uniform 数组的位置，并使用 gl.uniform1fv 一次性为整个数组赋值。这样更具可移植性和兼容性，以确保代码在各种 WebGL 实现中都能正常工作。
+        // 所以这里应该改为"u_kernel"
         const kernelLocation = gl.getUniformLocation(program, "u_kernel[0]");
         const kernelWeightLocation = gl.getUniformLocation(program, "u_kernelWeight");
         const flipYLocation = gl.getUniformLocation(program, "u_flipY");
